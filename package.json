@@ -6,21 +6,43 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "ingest": "tsx scripts/ingest.ts",
+    "ingest:art": "tsx scripts/ingest-artworks.ts",
+    "ingest:stories": "tsx scripts/ingest-stories.ts",
+    "qa:live": "playwright test",
+    "ingest:causes": "tsx scripts/ingest-causes.ts"
   },
   "dependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
+    "d3-selection": "^3.0.0",
+    "d3-zoom": "^3.0.0",
+    "gsap": "^3.15.0",
     "next": "16.2.9",
+    "pg": "^8.21.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "three": "^0.184.0",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
+    "@types/d3-selection": "^3.0.11",
+    "@types/d3-zoom": "^3.0.8",
     "@types/node": "^20",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.184.1",
+    "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
+    "playwright": "^1.60.0",
     "tailwindcss": "^4",
+    "three-stdlib": "^2.36.1",
+    "tsx": "^4.22.4",
     "typescript": "^5"
   }
 }
