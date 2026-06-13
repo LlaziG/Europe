@@ -40,12 +40,9 @@ type Clickable = {
 };
 export type Registry = Map<string, Clickable>;
 
-export type Passage = { chapter: Chapter; text: string };
-
 export type HallColumn = {
   arts: Artwork[]; // 1–2 pieces (salon hang stacks two)
-  passage: Passage | null; // the slice of history that hangs beside them
-  chapter: Chapter | null; // the chapter being narrated at this point
+  chapter: Chapter | null; // the chapter this piece belongs to (audio context)
   side: number;
   x: number;
   z: number;
@@ -60,57 +57,31 @@ export type HallLayout = {
   columns: HallColumn[];
 };
 
-// The article flows through the hall passage by passage, each mounted as an
-// interpretive label beside the works of its stretch of history.
-function splitPassages(chapters: Chapter[], nCols: number): Passage[] {
-  if (!chapters.length || !nCols) return [];
-  const total = chapters.reduce((s, c) => s + c.body.length, 0);
-  const target = Math.min(620, Math.max(300, Math.ceil(total / nCols)));
-  const out: Passage[] = [];
-  for (const ch of chapters) {
-    const sentences = ch.body.split(/(?<=[.!?])\s+/);
-    let buf = "";
-    for (const s of sentences) {
-      buf = buf ? buf + " " + s : s;
-      if (buf.length >= target) {
-        out.push({ chapter: ch, text: buf });
-        buf = "";
-        if (out.length >= nCols) return out;
-      }
-    }
-    if (buf.length > 140) {
-      out.push({ chapter: ch, text: buf });
-      if (out.length >= nCols) return out;
-    }
-  }
-  return out;
-}
-
+// A clean visual gallery: framed works on the walls, no paragraphs of text —
+// the history is heard, not read. Each column still maps to a chapter so the
+// audioguide can place the piece in its part of the story.
 export function buildLayout(artworks: Artwork[], chapters: Chapter[]): HallLayout {
   const width = 10.6;
   const height = 4.6;
   const salon = artworks.length > 26; // double-hang large collections
-  const SPACING = chapters.length ? 4.5 : 3.45; // room for the side labels
+  const SPACING = 3.45;
   const group = salon ? 2 : 1;
 
   const artCols: Artwork[][] = [];
   for (let i = 0; i < artworks.length; i += group)
     artCols.push(artworks.slice(i, i + group));
 
-  const passages = splitPassages(chapters, artCols.length);
-
   const perSide = Math.max(1, Math.ceil(artCols.length / 2));
   const length = Math.max(19, perSide * SPACING + 12);
   const zStart = length / 2 - 5.6;
-  let narrated: Chapter | null = null;
   const columns: HallColumn[] = artCols.map((arts, k) => {
     const side = k % 2;
-    const passage = passages[k] ?? null;
-    if (passage) narrated = passage.chapter;
+    const chapter = chapters.length
+      ? chapters[Math.min(chapters.length - 1, Math.floor((k / artCols.length) * chapters.length))]
+      : null;
     return {
       arts,
-      passage,
-      chapter: narrated,
+      chapter,
       side,
       x: side === 0 ? -width / 2 + 0.07 : width / 2 - 0.07,
       z: zStart - Math.floor(k / 2) * SPACING,
@@ -312,89 +283,6 @@ function Painting({
   );
 }
 
-// the interpretive label beside each work — image and history side by side
-function SidePanel({
-  passage,
-  registry,
-}: {
-  passage: Passage;
-  registry: Registry;
-}) {
-  const boardRef = useRef<THREE.Mesh | null>(null);
-  const borderMat = useRef<THREE.MeshStandardMaterial | null>(null);
-
-  useEffect(() => {
-    const m = boardRef.current;
-    if (!m) return;
-    registry.set(m.uuid, {
-      mesh: m,
-      glow: borderMat.current,
-      payload: { kind: "chapter", chapter: passage.chapter },
-    });
-    const uuid = m.uuid;
-    return () => {
-      registry.delete(uuid);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [passage]);
-
-  const eyebrow = `${passage.chapter.idx + 1} · ${passage.chapter.title}`;
-  return (
-    <group position={[0, 1.55, 0]}>
-      <mesh position={[0, 0, -0.004]}>
-        <planeGeometry args={[1.25, 1.74]} />
-        <meshStandardMaterial
-          ref={borderMat}
-          color="#5d4c27"
-          metalness={0.7}
-          roughness={0.45}
-          emissive="#c8a55f"
-          emissiveIntensity={0}
-        />
-      </mesh>
-      <mesh ref={boardRef}>
-        <planeGeometry args={[1.18, 1.67]} />
-        <meshStandardMaterial color="#1f1b15" roughness={0.92} />
-      </mesh>
-      <Text
-        position={[-0.52, 0.74, 0.01]}
-        fontSize={0.041}
-        letterSpacing={0.2}
-        color="#a8946a"
-        anchorX="left"
-        anchorY="top"
-        maxWidth={1.05}
-        clipRect={[-0.01, -0.1, 1.05, 0.01]}
-      >
-        {(eyebrow.length > 44 ? eyebrow.slice(0, 42) + "…" : eyebrow).toUpperCase()}
-      </Text>
-      <Text
-        position={[-0.52, 0.58, 0.01]}
-        fontSize={0.054}
-        maxWidth={1.05}
-        lineHeight={1.52}
-        color="#c6b896"
-        anchorX="left"
-        anchorY="top"
-        textAlign="left"
-        clipRect={[-0.01, -1.26, 1.06, 0.02]}
-      >
-        {passage.text}
-      </Text>
-      <Text
-        position={[-0.52, -0.76, 0.01]}
-        fontSize={0.038}
-        letterSpacing={0.18}
-        color="#8d8064"
-        anchorX="left"
-        anchorY="bottom"
-      >
-        CLICK TO READ THE FULL CHAPTER
-      </Text>
-    </group>
-  );
-}
-
 export default function Hall({
   entity,
   layout,
@@ -421,14 +309,6 @@ export default function Hall({
   const fwd = useMemo(() => new THREE.Vector3(), []);
   const rgt = useMemo(() => new THREE.Vector3(), []);
 
-  const intro = useMemo(() => {
-    const s = entity.summary ?? "";
-    if (s.length <= 470) return s;
-    const cut = s.slice(0, 470);
-    const end = cut.lastIndexOf(". ");
-    return (end > 220 ? cut.slice(0, end + 1) : cut) + " …";
-  }, [entity.summary]);
-
   // ── pooled lighting rig: constant cost regardless of collection size ──
   const spotTargets = useMemo(
     () => Array.from({ length: POOL_SPOTS }, () => new THREE.Object3D()),
@@ -448,12 +328,7 @@ export default function Hall({
           H - 0.52,
           c.z,
         ] as const,
-        target: [
-          c.x,
-          c.arts.length > 1 ? 2.15 : 1.72,
-          // aim between the work and its side label
-          c.z - (c.passage ? 0.6 : 0),
-        ] as const,
+        target: [c.x, c.arts.length > 1 ? 2.15 : 1.72, c.z] as const,
       })),
     [columns, W, H]
   );
@@ -796,65 +671,8 @@ export default function Hall({
               </Suspense>
             </ArtBoundary>
           ))}
-          {col.passage && (
-            <group position={[(col.side === 0 ? 1 : -1) * 1.98, 0, 0]}>
-              <SidePanel passage={col.passage} registry={registry} />
-            </group>
-          )}
         </group>
       ))}
-
-      {/* entrance bay: the hall's prologue */}
-      <group position={[-W / 2 + 0.06, 1.66, L / 2 - 2.9]} rotation-y={Math.PI / 2}>
-        <mesh>
-          <planeGeometry args={[3.1, 2.05]} />
-          <meshStandardMaterial color="#1f1b15" roughness={0.92} />
-        </mesh>
-        <mesh position={[0, 0, -0.005]}>
-          <planeGeometry args={[3.18, 2.13]} />
-          <meshStandardMaterial color="#5d4c27" metalness={0.7} roughness={0.45} />
-        </mesh>
-        <Text
-          position={[-1.4, 0.86, 0.01]}
-          fontSize={0.072}
-          letterSpacing={0.26}
-          color="#a8946a"
-          anchorX="left"
-          anchorY="top"
-        >
-          {entity.kind === "civilization" ? "CIVILIZATION" : "MAJOR EVENT"} ·{" "}
-          {entity.datesLabel.toUpperCase()}
-        </Text>
-        <Text
-          position={[-1.4, 0.68, 0.01]}
-          fontSize={0.062}
-          maxWidth={2.8}
-          lineHeight={1.52}
-          color="#cfc2a4"
-          anchorX="left"
-          anchorY="top"
-          textAlign="left"
-        >
-          {intro}
-        </Text>
-        <Text
-          position={[-1.4, -0.86, 0.01]}
-          fontSize={0.052}
-          letterSpacing={0.2}
-          color="#8d8064"
-          anchorX="left"
-          anchorY="bottom"
-        >
-          THE STORY CONTINUES BESIDE EACH WORK
-        </Text>
-        <TrackFixture position={[0, H - 1.66 - 0.32, 2.1]} targetPos={[0, 0, 0]} />
-        <StaticSpot
-          position={[0, H - 1.66 - 0.32, 2.1]}
-          targetPos={[0, 0, 0]}
-          intensity={13}
-          angle={0.62}
-        />
-      </group>
 
       {/* end wall inscription */}
       <group position={[0, 0, -L / 2 + 0.06]}>

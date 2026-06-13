@@ -1626,3 +1626,16 @@ a.pl-enter:hover { background: linear-gradient(180deg, rgba(200, 165, 95, 0.32),
 .mg-narrating .bars i:nth-child(2) { height: 13px; animation-delay: 0.2s; }
 .mg-narrating .bars i:nth-child(3) { height: 9px; animation-delay: 0.4s; }
 @keyframes mg-eq { 0%, 100% { transform: scaleY(0.4); } 50% { transform: scaleY(1); } }
+
+.mg-listen {
+  display: flex; align-items: center; gap: 10px;
+  margin: 4px 0 14px;
+  padding: 11px 18px;
+  border: 1px solid var(--gold-dim); border-radius: 8px;
+  background: linear-gradient(180deg, rgba(200,165,95,0.16), rgba(200,165,95,0.04));
+  color: var(--gold);
+  font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+  transition: background 0.2s, border-color 0.2s;
+}
+.mg-listen:hover { background: rgba(200,165,95,0.24); border-color: var(--gold); }
+.mg-listen span { font-size: 9px; letter-spacing: 0.1em; text-transform: none; font-style: italic; color: var(--text-dim); }

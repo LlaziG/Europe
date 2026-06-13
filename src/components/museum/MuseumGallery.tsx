@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { Canvas } from "@react-three/fiber";
 import { Environment, PointerLockControls } from "@react-three/drei";
@@ -35,8 +35,6 @@ export default function MuseumGallery({
   const controlsRef = useRef<PLCImpl | null>(null);
 
   const narration = useNarration();
-  const narrateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastSpoken = useRef<string | null>(null);
 
   // welcome narration the moment you step in
   const introNarration = useMemo(() => {
@@ -98,43 +96,38 @@ export default function MuseumGallery({
   const enter = () => {
     setEntered(true);
     tryLock();
-    // the click that enters is the user gesture that unlocks audio
-    lastSpoken.current = "intro";
+    // the only thing that auto-plays: the welcome (the click unlocks audio)
     narration.speak(introNarration, `Welcome — ${entity.name}`);
   };
 
-  // gaze-driven audioguide: read the story of the piece you settle on. A short
-  // dwell debounce keeps passing glances from cutting the narration short.
-  useEffect(() => {
-    if (narrateTimer.current) clearTimeout(narrateTimer.current);
-    if (!narration.enabled || !locked || inspect || reader) return;
-    if (!hovered) return;
-    if (hovered.key === lastSpoken.current) return;
-    narrateTimer.current = setTimeout(() => {
-      lastSpoken.current = hovered.key;
-      narration.speak(hovered.narration, hovered.label);
-    }, 650);
-    return () => {
-      if (narrateTimer.current) clearTimeout(narrateTimer.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hovered, locked, inspect, reader, narration.enabled]);
-
-  // opening a piece reads its full story; closing hands you back to the hall
-  useEffect(() => {
+  // play the story of whatever you're looking at — never automatic. Press L
+  // (listen) or P (play) with a piece under the crosshair, or while inspecting.
+  const playFocused = useCallback(() => {
     if (inspect) {
-      lastSpoken.current = `inspect:${inspect.art.slug}`;
       const spoken =
         inspect.art.narration ??
         inspect.chapter?.narration ??
         `${artDisplayTitle(inspect.art.title, inspect.art.story)}. ${inspect.chapter?.body ?? inspect.art.story ?? ""}`;
       narration.speak(spoken, artDisplayTitle(inspect.art.title, inspect.art.story));
     } else if (reader) {
-      lastSpoken.current = `reader:${reader.id}`;
       narration.speak(reader.narration ?? `${reader.title}. ${reader.body}`, reader.title);
+    } else if (hovered) {
+      narration.speak(hovered.narration, hovered.label);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inspect, reader]);
+  }, [inspect, reader, hovered, narration]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!entered) return;
+      if (e.key === "l" || e.key === "L" || e.key === "p" || e.key === "P") {
+        e.preventDefault();
+        if (narration.speaking) narration.stop();
+        else playFocused();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [entered, playFocused, narration]);
 
   return (
     <div className="mg-root" style={{ "--c": entity.color } as React.CSSProperties}>
@@ -204,7 +197,6 @@ export default function MuseumGallery({
               narration.stop();
             } else {
               narration.setEnabled(true);
-              lastSpoken.current = null;
             }
           }}
           title={narration.enabled ? "Mute the audioguide" : "Resume the audioguide"}
@@ -229,13 +221,15 @@ export default function MuseumGallery({
       {locked && hovered && (
         <div className="mg-hovercard">
           <i>⤷</i> {hovered.label}
-          <span>click to {hovered.verb}</span>
+          <span>
+            {narration.speaking ? "L — stop" : "L / P — listen"} · click to inspect
+          </span>
         </div>
       )}
       {locked && (
         <div className="mg-hints">
-          WASD — walk <i>◆</i> shift — stride <i>◆</i> click / enter — open{" "}
-          <i>◆</i> esc — release
+          WASD — walk <i>◆</i> shift — stride <i>◆</i> L / P — listen <i>◆</i>{" "}
+          click — inspect <i>◆</i> esc — release
         </div>
       )}
 
@@ -374,6 +368,12 @@ export default function MuseumGallery({
                 </>
               )}
             </dl>
+            {narration.supported && (
+              <button className="mg-listen" onClick={() => (narration.speaking ? narration.stop() : playFocused())}>
+                {narration.speaking ? "■ Stop" : "▶ Listen to the story"}
+                <span>or press L</span>
+              </button>
+            )}
             <div className="foot">
               {inspect.art.wikiUrl && (
                 <a href={inspect.art.wikiUrl} target="_blank" rel="noreferrer">
