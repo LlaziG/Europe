@@ -36,12 +36,8 @@ export default function MuseumGallery({
 
   const narration = useNarration();
 
-  // welcome narration the moment you step in
-  const introNarration = useMemo(() => {
-    const lead = (entity.summary ?? "").split(/(?<=[.!?])\s/).slice(0, 2).join(" ");
-    return `Welcome to the gallery of ${entity.name}, ${entity.datesLabel}. ${lead}`;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entity]);
+  // the only thing that auto-plays — just the greeting, nothing more
+  const introNarration = `Welcome to ${entity.name}.`;
 
   const layout = useMemo(
     () => buildLayout(artworks, chapters),
