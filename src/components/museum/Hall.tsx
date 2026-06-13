@@ -23,7 +23,12 @@ const EYE = 1.65;
 const POOL_SPOTS = 12;
 const POOL_PENDANTS = 5;
 
-export type HallHover = { label: string; verb: "inspect" | "read" };
+export type HallHover = {
+  key: string; // stable id of the focused piece (for narration de-dup)
+  label: string;
+  verb: "inspect" | "read";
+  narration: string; // the sourced text to read aloud
+};
 export type HallTarget =
   | { kind: "art"; art: Artwork; chapter: Chapter | null }
   | { kind: "chapter"; chapter: Chapter };
@@ -613,13 +618,22 @@ export default function Hall({
           entry
             ? entry.payload.kind === "art"
               ? {
+                  key: `art:${entry.payload.art.slug}`,
                   label: artDisplayTitle(
                     entry.payload.art.title,
                     entry.payload.art.story
                   ),
                   verb: "inspect",
+                  narration:
+                    `${artDisplayTitle(entry.payload.art.title, entry.payload.art.story)}. ` +
+                    (entry.payload.art.story ?? ""),
                 }
-              : { label: entry.payload.chapter.title, verb: "read" }
+              : {
+                  key: `chapter:${entry.payload.chapter.id}`,
+                  label: entry.payload.chapter.title,
+                  verb: "read",
+                  narration: `${entry.payload.chapter.title}. ${entry.payload.chapter.body}`,
+                }
             : null
         );
       }

@@ -1590,3 +1590,39 @@ a.pl-enter:hover { background: linear-gradient(180deg, rgba(200, 165, 95, 0.32),
   transition: background 0.2s, border-color 0.2s;
 }
 .tv-zoom button:hover { background: rgba(200,165,95,0.16); border-color: var(--gold); }
+
+/* ── museum audioguide ── */
+.mg-audio {
+  position: fixed; top: 16px; right: 22px; z-index: 30;
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--gold-dim); border-radius: 999px;
+  background: rgba(12,11,9,0.7);
+  font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text-dim);
+  transition: color 0.25s, border-color 0.25s;
+}
+.mg-audio.on { color: var(--gold); border-color: var(--gold-dim); }
+.mg-audio:hover { border-color: var(--gold); }
+
+.mg-narrating {
+  position: fixed; bottom: 54px; left: 50%; transform: translateX(-50%);
+  z-index: 30;
+  display: flex; align-items: center; gap: 10px;
+  max-width: 70vw;
+  padding: 9px 18px;
+  border: 1px solid var(--gold-dim); border-radius: 999px;
+  background: rgba(14,13,10,0.82);
+  font-family: var(--serif); font-size: 13px; color: var(--paper);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  pointer-events: none;
+}
+.mg-narrating .bars { display: inline-flex; align-items: flex-end; gap: 2px; height: 13px; flex: none; }
+.mg-narrating .bars i {
+  width: 2.5px; background: var(--gold); border-radius: 1px;
+  animation: mg-eq 0.9s ease-in-out infinite;
+}
+.mg-narrating .bars i:nth-child(1) { height: 6px; animation-delay: 0s; }
+.mg-narrating .bars i:nth-child(2) { height: 13px; animation-delay: 0.2s; }
+.mg-narrating .bars i:nth-child(3) { height: 9px; animation-delay: 0.4s; }
+@keyframes mg-eq { 0%, 100% { transform: scaleY(0.4); } 50% { transform: scaleY(1); } }

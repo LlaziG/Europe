@@ -12,6 +12,7 @@ import {
   thumbAt,
 } from "@/components/timeline/timeline-utils";
 import Hall, { buildLayout, type HallHover, type HallTarget } from "./Hall";
+import { useNarration } from "./useNarration";
 
 export default function MuseumGallery({
   entity,
@@ -32,6 +33,17 @@ export default function MuseumGallery({
   const [reader, setReader] = useState<Chapter | null>(null);
   const lockedRef = useRef(false);
   const controlsRef = useRef<PLCImpl | null>(null);
+
+  const narration = useNarration();
+  const narrateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSpoken = useRef<string | null>(null);
+
+  // welcome narration the moment you step in
+  const introNarration = useMemo(() => {
+    const lead = (entity.summary ?? "").split(/(?<=[.!?])\s/).slice(0, 2).join(" ");
+    return `Welcome to the gallery of ${entity.name}, ${entity.datesLabel}. ${lead}`;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entity]);
 
   const layout = useMemo(
     () => buildLayout(artworks, chapters),
@@ -86,7 +98,43 @@ export default function MuseumGallery({
   const enter = () => {
     setEntered(true);
     tryLock();
+    // the click that enters is the user gesture that unlocks audio
+    lastSpoken.current = "intro";
+    narration.speak(introNarration, `Welcome — ${entity.name}`);
   };
+
+  // gaze-driven audioguide: read the story of the piece you settle on. A short
+  // dwell debounce keeps passing glances from cutting the narration short.
+  useEffect(() => {
+    if (narrateTimer.current) clearTimeout(narrateTimer.current);
+    if (!narration.enabled || !locked || inspect || reader) return;
+    if (!hovered) return;
+    if (hovered.key === lastSpoken.current) return;
+    narrateTimer.current = setTimeout(() => {
+      lastSpoken.current = hovered.key;
+      narration.speak(hovered.narration, hovered.label);
+    }, 650);
+    return () => {
+      if (narrateTimer.current) clearTimeout(narrateTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hovered, locked, inspect, reader, narration.enabled]);
+
+  // opening a piece reads its full story; closing hands you back to the hall
+  useEffect(() => {
+    if (inspect) {
+      lastSpoken.current = `inspect:${inspect.art.slug}`;
+      const body = inspect.chapter?.body ?? inspect.art.story ?? "";
+      narration.speak(
+        `${artDisplayTitle(inspect.art.title, inspect.art.story)}. ${body}`,
+        artDisplayTitle(inspect.art.title, inspect.art.story)
+      );
+    } else if (reader) {
+      lastSpoken.current = `reader:${reader.id}`;
+      narration.speak(`${reader.title}. ${reader.body}`, reader.title);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inspect, reader]);
 
   return (
     <div className="mg-root" style={{ "--c": entity.color } as React.CSSProperties}>
@@ -133,7 +181,11 @@ export default function MuseumGallery({
       </Canvas>
 
       {/* chrome */}
-      <a className="mg-exit" href={`/${entity.kind}/${entity.slug}`}>
+      <a
+        className="mg-exit"
+        href={`/${entity.kind}/${entity.slug}`}
+        onClick={() => narration.stop()}
+      >
         ← Back to the placard
       </a>
       <div className="mg-title">
@@ -142,6 +194,36 @@ export default function MuseumGallery({
         </span>
         <span className="nm">{entity.name}</span>
       </div>
+
+      {narration.supported && entered && (
+        <button
+          className={`mg-audio ${narration.enabled ? "on" : ""}`}
+          onClick={() => {
+            if (narration.enabled) {
+              narration.setEnabled(false);
+              narration.stop();
+            } else {
+              narration.setEnabled(true);
+              lastSpoken.current = null;
+            }
+          }}
+          title={narration.enabled ? "Mute the audioguide" : "Resume the audioguide"}
+        >
+          {narration.enabled ? "🔊" : "🔇"}
+          <span>{narration.enabled ? "Audioguide on" : "Audioguide off"}</span>
+        </button>
+      )}
+
+      {narration.enabled && narration.speaking && narration.current && (
+        <div className="mg-narrating">
+          <span className="bars" aria-hidden>
+            <i />
+            <i />
+            <i />
+          </span>
+          Narrating · {narration.current}
+        </div>
+      )}
 
       {locked && <div className="mg-crosshair" />}
       {locked && hovered && (
@@ -170,6 +252,7 @@ export default function MuseumGallery({
             {artworks.length} works
             {chapters.length > 0 && ` · ${chapters.length} chapters`} · first
             person · WASD + mouse
+            {narration.supported && " · 🔊 narrated audioguide"}
           </span>
         </button>
       )}
