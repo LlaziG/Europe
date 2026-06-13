@@ -625,14 +625,17 @@ export default function Hall({
                   ),
                   verb: "inspect",
                   narration:
+                    entry.payload.art.narration ??
                     `${artDisplayTitle(entry.payload.art.title, entry.payload.art.story)}. ` +
-                    (entry.payload.art.story ?? ""),
+                      (entry.payload.art.story ?? ""),
                 }
               : {
                   key: `chapter:${entry.payload.chapter.id}`,
                   label: entry.payload.chapter.title,
                   verb: "read",
-                  narration: `${entry.payload.chapter.title}. ${entry.payload.chapter.body}`,
+                  narration:
+                    entry.payload.chapter.narration ??
+                    `${entry.payload.chapter.title}. ${entry.payload.chapter.body}`,
                 }
             : null
         );

@@ -124,14 +124,14 @@ export default function MuseumGallery({
   useEffect(() => {
     if (inspect) {
       lastSpoken.current = `inspect:${inspect.art.slug}`;
-      const body = inspect.chapter?.body ?? inspect.art.story ?? "";
-      narration.speak(
-        `${artDisplayTitle(inspect.art.title, inspect.art.story)}. ${body}`,
-        artDisplayTitle(inspect.art.title, inspect.art.story)
-      );
+      const spoken =
+        inspect.art.narration ??
+        inspect.chapter?.narration ??
+        `${artDisplayTitle(inspect.art.title, inspect.art.story)}. ${inspect.chapter?.body ?? inspect.art.story ?? ""}`;
+      narration.speak(spoken, artDisplayTitle(inspect.art.title, inspect.art.story));
     } else if (reader) {
       lastSpoken.current = `reader:${reader.id}`;
-      narration.speak(`${reader.title}. ${reader.body}`, reader.title);
+      narration.speak(reader.narration ?? `${reader.title}. ${reader.body}`, reader.title);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inspect, reader]);

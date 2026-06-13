@@ -16,6 +16,7 @@ function mapArtwork(r: Record<string, unknown>): Artwork {
     width: r.width as number | null,
     height: r.height as number | null,
     story: r.story as string | null,
+    narration: r.narration as string | null,
     license: r.license as string | null,
     credit: r.credit as string | null,
     wikiUrl: r.wiki_url as string | null,
@@ -51,7 +52,7 @@ export async function getMuseum(
       [c.id]
     );
     const chapters = await pool.query(
-      `SELECT id, idx, title, body FROM chapters
+      `SELECT id, idx, title, body, narration FROM chapters
        WHERE civilization_id = $1 ORDER BY idx`,
       [c.id]
     );
@@ -86,7 +87,7 @@ export async function getMuseum(
     [e.id]
   );
   const chapters = await pool.query(
-    `SELECT id, idx, title, body FROM chapters
+    `SELECT id, idx, title, body, narration FROM chapters
      WHERE event_id = $1 ORDER BY idx`,
     [e.id]
   );

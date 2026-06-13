@@ -66,6 +66,7 @@ export type Artwork = {
   width: number | null;
   height: number | null;
   story: string | null;
+  narration: string | null;
   license: string | null;
   credit: string | null;
   wikiUrl: string | null;
@@ -76,6 +77,7 @@ export type Chapter = {
   idx: number;
   title: string;
   body: string;
+  narration: string | null;
 };
 
 export type MuseumEntity = {
