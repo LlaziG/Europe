@@ -1639,3 +1639,22 @@ a.pl-enter:hover { background: linear-gradient(180deg, rgba(200, 165, 95, 0.32),
 }
 .mg-listen:hover { background: rgba(200,165,95,0.24); border-color: var(--gold); }
 .mg-listen span { font-size: 9px; letter-spacing: 0.1em; text-transform: none; font-style: italic; color: var(--text-dim); }
+
+/* ── inspect tabs: Narrated Story / Full Story ── */
+.mg-tabs {
+  display: flex; gap: 4px;
+  margin: 6px 0 14px;
+  border-bottom: 1px solid var(--gold-faint);
+}
+.mg-tabs button {
+  padding: 8px 14px 10px;
+  font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--text-dim);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.2s, border-color 0.2s;
+}
+.mg-tabs button:hover { color: var(--paper); }
+.mg-tabs button.on { color: var(--gold); border-bottom-color: var(--gold); }
+.mg-tabpanel { display: flex; flex-direction: column; }
+.mg-tabpanel .mg-listen { margin: 0 0 14px; align-self: flex-start; }

@@ -30,6 +30,7 @@ export default function MuseumGallery({
     art: Artwork;
     chapter: Chapter | null;
   } | null>(null);
+  const [inspectTab, setInspectTab] = useState<"narrated" | "full">("narrated");
   const [reader, setReader] = useState<Chapter | null>(null);
   const lockedRef = useRef(false);
   const controlsRef = useRef<PLCImpl | null>(null);
@@ -124,6 +125,11 @@ export default function MuseumGallery({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [entered, playFocused, narration]);
+
+  // every newly opened piece starts on the Narrated Story tab
+  useEffect(() => {
+    if (inspect) setInspectTab("narrated");
+  }, [inspect]);
 
   return (
     <div className="mg-root" style={{ "--c": entity.color } as React.CSSProperties}>
@@ -331,45 +337,82 @@ export default function MuseumGallery({
                 )}
               </div>
             )}
-            {inspect.art.story && (
-              <p className="mg-caption">{inspect.art.story}</p>
-            )}
 
-            {inspect.chapter ? (
-              <>
-                <div className="mg-hist-h">
-                  The History · {inspect.chapter.idx + 1} —{" "}
-                  {inspect.chapter.title}
-                </div>
-                <p className="story mg-prewrap">{inspect.chapter.body}</p>
-              </>
-            ) : entity.summary ? (
-              <>
-                <div className="mg-hist-h">The History</div>
-                <p className="story">{entity.summary}</p>
-              </>
-            ) : null}
-
-            <dl className="facts">
-              {inspect.art.license && (
-                <>
-                  <dt>License</dt>
-                  <dd>{inspect.art.license}</dd>
-                </>
-              )}
-              {inspect.art.credit && (
-                <>
-                  <dt>Credit</dt>
-                  <dd>{inspect.art.credit}</dd>
-                </>
-              )}
-            </dl>
-            {narration.supported && (
-              <button className="mg-listen" onClick={() => (narration.speaking ? narration.stop() : playFocused())}>
-                {narration.speaking ? "■ Stop" : "▶ Listen to the story"}
-                <span>or press L</span>
+            <div className="mg-tabs" role="tablist">
+              <button
+                role="tab"
+                className={inspectTab === "narrated" ? "on" : ""}
+                onClick={() => setInspectTab("narrated")}
+              >
+                Narrated Story
               </button>
+              <button
+                role="tab"
+                className={inspectTab === "full" ? "on" : ""}
+                onClick={() => {
+                  narration.stop();
+                  setInspectTab("full");
+                }}
+              >
+                Full Story
+              </button>
+            </div>
+
+            {inspectTab === "narrated" ? (
+              <div className="mg-tabpanel">
+                {narration.supported && (
+                  <button
+                    className="mg-listen"
+                    onClick={() =>
+                      narration.speaking ? narration.stop() : playFocused()
+                    }
+                  >
+                    {narration.speaking ? "■ Stop" : "▶ Listen"}
+                    <span>or press L</span>
+                  </button>
+                )}
+                <p className="story mg-prewrap">
+                  {inspect.art.narration ??
+                    inspect.art.story ??
+                    "A narrated story for this piece is still being prepared."}
+                </p>
+              </div>
+            ) : (
+              <div className="mg-tabpanel">
+                {inspect.art.story && (
+                  <p className="mg-caption">{inspect.art.story}</p>
+                )}
+                {inspect.chapter ? (
+                  <>
+                    <div className="mg-hist-h">
+                      The History · {inspect.chapter.idx + 1} —{" "}
+                      {inspect.chapter.title}
+                    </div>
+                    <p className="story mg-prewrap">{inspect.chapter.body}</p>
+                  </>
+                ) : entity.summary ? (
+                  <>
+                    <div className="mg-hist-h">The History</div>
+                    <p className="story">{entity.summary}</p>
+                  </>
+                ) : null}
+                <dl className="facts">
+                  {inspect.art.license && (
+                    <>
+                      <dt>License</dt>
+                      <dd>{inspect.art.license}</dd>
+                    </>
+                  )}
+                  {inspect.art.credit && (
+                    <>
+                      <dt>Credit</dt>
+                      <dd>{inspect.art.credit}</dd>
+                    </>
+                  )}
+                </dl>
+              </div>
             )}
+
             <div className="foot">
               {inspect.art.wikiUrl && (
                 <a href={inspect.art.wikiUrl} target="_blank" rel="noreferrer">
