@@ -14,6 +14,38 @@ import {
 import Hall, { buildLayout, type HallHover, type HallTarget } from "./Hall";
 import { useNarration } from "./useNarration";
 
+// the narration text that glows word-by-word as the voice speaks it
+function NarratedText({
+  text,
+  progress,
+  active,
+}: {
+  text: string;
+  progress: number;
+  active: boolean;
+}) {
+  const tokens = useMemo(() => text.split(/(\s+)/), [text]);
+  const wordPositions = useMemo(
+    () => tokens.map((t, i) => (/\S/.test(t) ? i : -1)).filter((i) => i >= 0),
+    [tokens]
+  );
+  const litCount = active ? Math.round(progress * wordPositions.length) : 0;
+  const litThreshold = wordPositions[litCount - 1] ?? -1;
+  return (
+    <p className={`story mg-prewrap mg-narrated ${active ? "on" : ""}`}>
+      {tokens.map((t, i) =>
+        /\S/.test(t) ? (
+          <span key={i} className={i <= litThreshold ? "w lit" : "w"}>
+            {t}
+          </span>
+        ) : (
+          <span key={i}>{t}</span>
+        )
+      )}
+    </p>
+  );
+}
+
 export default function MuseumGallery({
   entity,
   artworks,
@@ -379,11 +411,15 @@ export default function MuseumGallery({
                     <span>or press L</span>
                   </button>
                 )}
-                <p className="story mg-prewrap">
-                  {inspect.art.narration ??
+                <NarratedText
+                  text={
+                    inspect.art.narration ??
                     inspect.art.story ??
-                    "A narrated story for this piece is still being prepared."}
-                </p>
+                    "A narrated story for this piece is still being prepared."
+                  }
+                  progress={narration.progress}
+                  active={narration.speaking}
+                />
               </div>
             ) : (
               <div className="mg-tabpanel">

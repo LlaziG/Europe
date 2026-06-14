@@ -4,16 +4,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 // The museum audioguide. Plays a pre-recorded ElevenLabs MP3 when one exists
 // for the piece, and falls back to the browser's speech synthesis otherwise.
-// Either way it only voices the already-stored, sourced narration text.
+// Exposes `progress` (0–1 of the current narration) so the on-screen text can
+// glow along as it's spoken.
 export function useNarration() {
-  // false during SSR and the first client render (so markup matches), then
-  // true after mount — avoids hydration mismatches on window-only state
   const [supported, setSupported] = useState(false);
   const synth =
     typeof window !== "undefined" && "speechSynthesis" in window;
   const [enabled, setEnabled] = useState(true);
   const [speaking, setSpeaking] = useState(false);
   const [current, setCurrent] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -40,15 +40,24 @@ export function useNarration() {
     };
   }, [synth]);
 
+  // tear down cleanly — detach handlers FIRST so clearing src doesn't fire the
+  // error handler (which would otherwise kick off the browser voice on a stop)
   const stop = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = "";
+    const a = audioRef.current;
+    if (a) {
+      a.onplaying = null;
+      a.onended = null;
+      a.onerror = null;
+      a.ontimeupdate = null;
+      a.pause();
+      a.removeAttribute("src");
+      a.load();
       audioRef.current = null;
     }
     if (synth) window.speechSynthesis.cancel();
     setSpeaking(false);
     setCurrent(null);
+    setProgress(0);
   }, [synth]);
 
   const speakSynth = useCallback(
@@ -61,9 +70,15 @@ export function useNarration() {
       u.rate = 0.95;
       u.pitch = 1;
       u.lang = voiceRef.current?.lang || "en-GB";
-      u.onstart = () => setSpeaking(true);
+      u.onstart = () => {
+        setSpeaking(true);
+        setProgress(0);
+      };
+      u.onboundary = (e) =>
+        setProgress(Math.min(1, e.charIndex / Math.max(1, clean.length)));
       u.onend = () => {
         setSpeaking(false);
+        setProgress(1);
         setCurrent(null);
       };
       setCurrent(label ?? clean);
@@ -82,18 +97,29 @@ export function useNarration() {
         const a = new Audio(audioUrl);
         audioRef.current = a;
         a.onplaying = () => setSpeaking(true);
+        a.ontimeupdate = () => {
+          if (a.duration && isFinite(a.duration))
+            setProgress(Math.min(1, a.currentTime / a.duration));
+        };
         a.onended = () => {
           setSpeaking(false);
+          setProgress(1);
           setCurrent(null);
           audioRef.current = null;
         };
         a.onerror = () => {
-          // no recording for this piece yet → speak the text
+          // no recording for this piece yet → speak the text instead
           audioRef.current = null;
           speakSynth(clean, label);
         };
         setCurrent(label ?? clean);
-        a.play().catch(() => speakSynth(clean, label));
+        setProgress(0);
+        a.play().catch((err) => {
+          // a pause()/load() during start rejects with AbortError — ignore it;
+          // only fall back for genuine playback blocks
+          if (err && err.name === "AbortError") return;
+          speakSynth(clean, label);
+        });
         return;
       }
       speakSynth(clean, label);
@@ -111,5 +137,5 @@ export function useNarration() {
     [synth]
   );
 
-  return { supported, enabled, setEnabled, speak, stop, speaking, current };
+  return { supported, enabled, setEnabled, speak, stop, speaking, current, progress };
 }

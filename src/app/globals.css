@@ -1658,3 +1658,11 @@ a.pl-enter:hover { background: linear-gradient(180deg, rgba(200, 165, 95, 0.32),
 .mg-tabs button.on { color: var(--gold); border-bottom-color: var(--gold); }
 .mg-tabpanel { display: flex; flex-direction: column; }
 .mg-tabpanel .mg-listen { margin: 0 0 14px; align-self: flex-start; }
+
+/* karaoke-style narration follow */
+.mg-narrated .w { transition: color 0.18s ease, text-shadow 0.18s ease; }
+.mg-narrated.on .w:not(.lit) { color: var(--text-dim); }
+.mg-narrated.on .w.lit {
+  color: #f3e4c0;
+  text-shadow: 0 0 12px rgba(200, 165, 95, 0.55);
+}
