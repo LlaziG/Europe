@@ -33,7 +33,8 @@ async function main() {
   mkdirSync(`${DIR}/in`, { recursive: true });
   mkdirSync(`${DIR}/out`, { recursive: true });
 
-  const where = REGEN ? "" : "AND a.narration IS NULL";
+  // REGEN now means "everything that doesn't yet have storytelling narration"
+  const where = REGEN ? "AND NOT a.storied" : "AND a.narration IS NULL";
   const art = await pool.query(
     `SELECT a.id, a.title, a.story,
             COALESCE(c.name, e.name) AS subject,
@@ -44,7 +45,7 @@ async function main() {
      WHERE a.story IS NOT NULL AND length(a.story) > 12 ${where}
      ORDER BY a.id`
   );
-  const chWhere = REGEN ? "" : "AND ch.narration IS NULL";
+  const chWhere = REGEN ? "AND NOT ch.storied" : "AND ch.narration IS NULL";
   const ch = await pool.query(
     `SELECT ch.id, ch.title, ch.body,
             COALESCE(c.name, e.name) AS subject,

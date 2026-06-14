@@ -38,18 +38,18 @@ async function main() {
         bad++;
         continue;
       }
-      await pool.query(`UPDATE ${table} SET narration = $1 WHERE id = $2`, [
-        text,
-        it.id,
-      ]);
+      await pool.query(
+        `UPDATE ${table} SET narration = $1, storied = TRUE WHERE id = $2`,
+        [text, it.id]
+      );
       if (kind === "art") art++;
       else ch++;
     }
   }
 
   const left = await pool.query(
-    `SELECT (SELECT count(*) FROM artworks WHERE narration IS NULL AND story IS NOT NULL AND length(story) > 12) AS art_left,
-            (SELECT count(*) FROM chapters WHERE narration IS NULL AND length(body) > 60) AS ch_left`
+    `SELECT (SELECT count(*) FROM artworks WHERE NOT storied AND story IS NOT NULL AND length(story) > 12) AS art_unstoried,
+            (SELECT count(*) FROM chapters WHERE NOT storied AND length(body) > 60) AS ch_unstoried`
   );
   console.log(
     JSON.stringify({ ingested_art: art, ingested_chapters: ch, skipped: bad, remaining: left.rows[0] })
