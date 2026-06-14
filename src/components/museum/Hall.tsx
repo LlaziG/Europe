@@ -28,6 +28,7 @@ export type HallHover = {
   label: string;
   verb: "inspect" | "read";
   narration: string; // the sourced text to read aloud
+  audioUrl?: string; // pre-recorded ElevenLabs clip, if one exists
 };
 export type HallTarget =
   | { kind: "art"; art: Artwork; chapter: Chapter | null }
@@ -503,6 +504,7 @@ export default function Hall({
                     entry.payload.art.narration ??
                     `${artDisplayTitle(entry.payload.art.title, entry.payload.art.story)}. ` +
                       (entry.payload.art.story ?? ""),
+                  audioUrl: `/narration/art/${entry.payload.art.id}.mp3`,
                 }
               : {
                   key: `chapter:${entry.payload.chapter.id}`,

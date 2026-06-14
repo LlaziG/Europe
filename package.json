@@ -11,7 +11,8 @@
     "ingest:art": "tsx scripts/ingest-artworks.ts",
     "ingest:stories": "tsx scripts/ingest-stories.ts",
     "qa:live": "playwright test",
-    "ingest:causes": "tsx scripts/ingest-causes.ts"
+    "ingest:causes": "tsx scripts/ingest-causes.ts",
+    "tts": "tsx scripts/tts-render.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",

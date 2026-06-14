@@ -94,7 +94,11 @@ export default function MuseumGallery({
     setEntered(true);
     tryLock();
     // the only thing that auto-plays: the welcome (the click unlocks audio)
-    narration.speak(introNarration, `Welcome — ${entity.name}`);
+    narration.speak(
+      introNarration,
+      `Welcome — ${entity.name}`,
+      `/narration/welcome/${entity.kind}-${entity.slug}.mp3`
+    );
   };
 
   // play the story of whatever you're looking at — never automatic. Press L
@@ -105,11 +109,15 @@ export default function MuseumGallery({
         inspect.art.narration ??
         inspect.chapter?.narration ??
         `${artDisplayTitle(inspect.art.title, inspect.art.story)}. ${inspect.chapter?.body ?? inspect.art.story ?? ""}`;
-      narration.speak(spoken, artDisplayTitle(inspect.art.title, inspect.art.story));
+      narration.speak(
+        spoken,
+        artDisplayTitle(inspect.art.title, inspect.art.story),
+        `/narration/art/${inspect.art.id}.mp3`
+      );
     } else if (reader) {
       narration.speak(reader.narration ?? `${reader.title}. ${reader.body}`, reader.title);
     } else if (hovered) {
-      narration.speak(hovered.narration, hovered.label);
+      narration.speak(hovered.narration, hovered.label, hovered.audioUrl);
     }
   }, [inspect, reader, hovered, narration]);
 
